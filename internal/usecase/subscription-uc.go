@@ -3,9 +3,9 @@ package usecase
 import (
 	"context"
 	"errors"
+	"jobProject/internal/conv"
 	"jobProject/internal/model"
 	"jobProject/internal/repository"
-	"time"
 	"unicode/utf8"
 )
 
@@ -25,7 +25,7 @@ func NewSubUsecase(repo repository.SubsRepository) *SubUsecase {
 	return &SubUsecase{Repo: repo}
 }
 
-func (uc *SubUsecase) Create(ctx context.Context, s model.Subscription) error {
+func (uc *SubUsecase) CreateSubUC(ctx context.Context, s model.Subscription) error {
 	err := validateSubscription(s)
 	if err != nil {
 		return errors.Join(ErrValidation, err)
@@ -34,7 +34,11 @@ func (uc *SubUsecase) Create(ctx context.Context, s model.Subscription) error {
 	if err != nil {
 		return errors.Join(ErrValidation, err)
 	}
-	return nil
+	dbSub, err := conv.ParsedDates(s)
+	if err != nil {
+		return errors.Join(ErrValidation, err)
+	}
+	return uc.Repo.CreateSubRepo(ctx, dbSub)
 }
 
 func validateSubscription(s model.Subscription) error {
@@ -53,7 +57,7 @@ func validateSubscription(s model.Subscription) error {
 var ErrBadYearMonth = errors.New("invalid date format want MM-YYYY")
 
 func monthYearValidate(start string, end *string) error {
-	StartTime, err := ParseMMYYYY(start)
+	StartTime, err := conv.ParseMMYYYY(start)
 	if err != nil {
 		return err
 	}
@@ -62,20 +66,23 @@ func monthYearValidate(start string, end *string) error {
 		return nil
 	}
 
-	EndTime, err := ParseMMYYYY(*end)
+	EndTime, err := conv.ParseMMYYYY(*end)
 	if err != nil {
 		return err
 	}
 	if StartTime.After(EndTime) {
-		return errors.New("end_date must be more then start_date")
+		return errors.Join(ErrValidation, errors.New("end_date must be more then start_date"))
 	}
 	return nil
 }
 
-func ParseMMYYYY(s string) (time.Time, error) {
-	t, err := time.Parse("01-2006", s)
-	if err != nil {
-		return time.Time{}, ErrBadYearMonth
+func (uc *SubUsecase) ReadSubUC(ctx context.Context, id int) (model.SubscriptionDB, error) {
+	if id <= 0 {
+		return model.SubscriptionDB{}, errors.Join(ErrValidation, errors.New("id in query must be not less then 0"))
 	}
-	return time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.UTC), nil
+	sub, err := uc.Repo.ReadSubRepo(ctx, id)
+	if err != nil {
+		return model.SubscriptionDB{}, err
+	}
+	return sub, nil
 }

@@ -6,6 +6,7 @@ import (
 	"jobProject/internal/model"
 	"jobProject/internal/usecase"
 	"net/http"
+	"strconv"
 )
 
 var subUC *usecase.SubUsecase
@@ -18,7 +19,7 @@ func Init(uc *usecase.SubUsecase) error {
 	return nil
 }
 
-func Create(w http.ResponseWriter, r *http.Request) {
+func CreateSub(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method Not Allowed: ", http.StatusMethodNotAllowed)
 		return
@@ -30,16 +31,13 @@ func Create(w http.ResponseWriter, r *http.Request) {
 
 	var newSub model.Subscription
 
-	dec := json.NewDecoder(r.Body)
-	dec.DisallowUnknownFields()
-
-	err := dec.Decode(&newSub)
+	err := json.NewDecoder(r.Body).Decode(&newSub)
 	if err != nil {
 		http.Error(w, "Invalid JSON: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if err := subUC.Create(r.Context(), newSub); err != nil {
+	if err := subUC.CreateSubUC(r.Context(), newSub); err != nil {
 		switch {
 		case usecase.IsValidationErr(err):
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -58,4 +56,46 @@ func Create(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "JSON encoding error: "+err.Error(), http.StatusInternalServerError)
 	}
+}
+
+func ReadSubByID(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method Not Allowed: ", http.StatusMethodNotAllowed)
+		return
+	}
+
+	idStr := r.URL.Query().Get("id")
+	if idStr == "" {
+		http.Error(w, "id input is clear", http.StatusBadRequest)
+		return
+	}
+
+	idInt, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "pars error", http.StatusBadRequest)
+		return
+	}
+
+	sub, err := subUC.ReadSubUC(r.Context(), idInt)
+	if err != nil {
+		switch {
+		case usecase.IsValidationErr(err):
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		case usecase.IsConflictErr(err):
+			http.Error(w, err.Error(), http.StatusConflict)
+		default:
+			http.Error(w, "internal error: "+err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	text := fmt.Sprintf("column id: %d", idInt)
+	response := map[string]model.SubscriptionDB{text: sub}
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		http.Error(w, "JSON encoding error: "+err.Error(), http.StatusInternalServerError)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
 }

@@ -26,7 +26,8 @@ func main() {
 		log.Fatalf("handlers init: %v", err)
 	}
 
-	http.HandleFunc("/Create", handlers.Create)
+	http.HandleFunc("/CreateSub", handlers.CreateSub)
+	http.HandleFunc("/ReadSubByID", handlers.ReadSubByID)
 	log.Println("listening on :8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatalf("server error: %v", err)
