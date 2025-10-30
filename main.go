@@ -28,6 +28,7 @@ func main() {
 
 	http.HandleFunc("/CreateSub", handlers.CreateSub)
 	http.HandleFunc("/ReadSubByID", handlers.ReadSubByID)
+	http.HandleFunc("/PatchSubByID", handlers.PatchSubByID)
 	log.Println("listening on :8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatalf("server error: %v", err)

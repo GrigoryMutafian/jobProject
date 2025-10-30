@@ -6,6 +6,7 @@ import (
 	"jobProject/internal/conv"
 	"jobProject/internal/model"
 	"jobProject/internal/repository"
+	"strings"
 	"unicode/utf8"
 )
 
@@ -30,10 +31,6 @@ func (uc *SubUsecase) CreateSubUC(ctx context.Context, s model.Subscription) err
 	if err != nil {
 		return errors.Join(ErrValidation, err)
 	}
-	err = monthYearValidate(s.StartDate, s.EndDate)
-	if err != nil {
-		return errors.Join(ErrValidation, err)
-	}
 	dbSub, err := conv.ParsedDates(s)
 	if err != nil {
 		return errors.Join(ErrValidation, err)
@@ -42,14 +39,18 @@ func (uc *SubUsecase) CreateSubUC(ctx context.Context, s model.Subscription) err
 }
 
 func validateSubscription(s model.Subscription) error {
-	if s.Price < 0 {
+	if *s.Price < 0 {
 		return errors.New("price must be not less then 0")
 	}
-	if utf8.RuneCountInString(s.Service) == 0 {
+	if utf8.RuneCountInString(*s.Service) == 0 && strings.TrimSpace(*s.Service) == "" {
 		return errors.New("service name is empty")
 	}
-	if utf8.RuneCountInString(s.UserID) < 2 || utf8.RuneCountInString(s.UserID) > 64 {
-		return errors.New("validate userID length error")
+	if utf8.RuneCountInString(*s.UserID) != 36 {
+		return errors.New("validate userID length error, must be 36 chars")
+	}
+	err := monthYearValidate(*s.StartDate, s.EndDate)
+	if err != nil {
+		return errors.Join(ErrValidation, err)
 	}
 	return nil
 }
@@ -85,4 +86,22 @@ func (uc *SubUsecase) ReadSubUC(ctx context.Context, id int) (model.Subscription
 		return model.SubscriptionDB{}, err
 	}
 	return sub, nil
+}
+
+func (uc *SubUsecase) PatchSubByID(ctx context.Context, id int, s model.Subscription) error {
+	err := validateSubscription(s)
+	if id <= 0 {
+		return errors.Join(ErrValidation, errors.New("id in query must be not less then 0"))
+	}
+	if s.Service != nil && strings.TrimSpace(*s.Service) == "" {
+		return errors.Join(ErrValidation, errors.New("service name is empty"))
+	}
+	if err != nil {
+		return errors.Join(ErrValidation, err)
+	}
+	err = uc.Repo.PatchSubByID(ctx, id, s)
+	if err != nil {
+		return err
+	}
+	return nil
 }

@@ -6,7 +6,7 @@ import (
 )
 
 func ParsedDates(s model.Subscription) (model.SubscriptionDB, error) {
-	start, err := ParseMMYYYY(s.StartDate)
+	start, err := ParseMMYYYY(*s.StartDate)
 	if err != nil {
 		return model.SubscriptionDB{}, err
 	}
@@ -20,9 +20,9 @@ func ParsedDates(s model.Subscription) (model.SubscriptionDB, error) {
 		endConv = &end
 	}
 	return model.SubscriptionDB{
-		Service:   s.Service,
-		Price:     s.Price,
-		UserID:    s.UserID,
+		Service:   *s.Service,
+		Price:     *s.Price,
+		UserID:    *s.UserID,
 		StartDate: start,
 		EndDate:   endConv,
 	}, nil

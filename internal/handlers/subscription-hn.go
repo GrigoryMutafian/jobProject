@@ -51,7 +51,7 @@ func CreateSub(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	response := map[string]string{"name of added subscription is": newSub.Service}
+	response := map[string]string{"name of added subscription is": *newSub.Service}
 	err = json.NewEncoder(w).Encode(response)
 	if err != nil {
 		http.Error(w, "JSON encoding error: "+err.Error(), http.StatusInternalServerError)
@@ -91,6 +91,56 @@ func ReadSubByID(w http.ResponseWriter, r *http.Request) {
 
 	text := fmt.Sprintf("column id: %d", idInt)
 	response := map[string]model.SubscriptionDB{text: sub}
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		http.Error(w, "JSON encoding error: "+err.Error(), http.StatusInternalServerError)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+}
+
+func PatchSubByID(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPatch {
+		http.Error(w, "Method Not Allowed: ", http.StatusMethodNotAllowed)
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+
+	defer r.Body.Close()
+
+	var patchBody model.Subscription
+
+	err := json.NewDecoder(r.Body).Decode(&patchBody)
+	if err != nil {
+		http.Error(w, "Invalid JSON: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	idStr := r.URL.Query().Get("id")
+	if idStr == "" {
+		http.Error(w, "id input is clear", http.StatusBadRequest)
+		return
+	}
+
+	idInt, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "pars error", http.StatusBadRequest)
+		return
+	}
+	err = subUC.PatchSubByID(r.Context(), idInt, patchBody)
+	if err != nil {
+		switch {
+		case usecase.IsValidationErr(err):
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		case usecase.IsConflictErr(err):
+			http.Error(w, err.Error(), http.StatusConflict)
+		default:
+			http.Error(w, "internal error: "+err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+	response := map[int]string{idInt: "updated"}
 	err = json.NewEncoder(w).Encode(response)
 	if err != nil {
 		http.Error(w, "JSON encoding error: "+err.Error(), http.StatusInternalServerError)
