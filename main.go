@@ -26,9 +26,10 @@ func main() {
 		log.Fatalf("handlers init: %v", err)
 	}
 
-	http.HandleFunc("/CreateSub", handlers.CreateSub)
+	http.HandleFunc("/CreateColumn", handlers.CreateColumn)
 	http.HandleFunc("/ReadSubByID", handlers.ReadSubByID)
-	http.HandleFunc("/PatchSubByID", handlers.PatchSubByID)
+	http.HandleFunc("/PatchColumnByID", handlers.PatchColumnByID)
+	http.HandleFunc("/DeleteColumnByID", handlers.DeleteColumnByID)
 	log.Println("listening on :8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatalf("server error: %v", err)

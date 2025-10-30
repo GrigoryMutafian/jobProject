@@ -11,16 +11,17 @@ import (
 )
 
 type SubsRepository interface {
-	CreateSubRepo(ctx context.Context, model model.SubscriptionDB) error
-	ReadSubRepo(ctx context.Context, id int) (model.SubscriptionDB, error)
-	PatchSubByID(ctx context.Context, id int, s model.Subscription) error
+	CreateColumn(ctx context.Context, model model.SubscriptionDB) error
+	ReadColumn(ctx context.Context, id int) (model.SubscriptionDB, error)
+	PatchColumnByID(ctx context.Context, id int, s model.Subscription) error
+	DeleteColumnByID(ctx context.Context, id int) error
 }
 
 type PostgresSubs struct {
 	DB *sql.DB
 }
 
-func (r *PostgresSubs) CreateSubRepo(ctx context.Context, s model.SubscriptionDB) error {
+func (r *PostgresSubs) CreateColumn(ctx context.Context, s model.SubscriptionDB) error {
 	rows, err := r.DB.ExecContext(ctx, `INSERT INTO subs_table (service, price, user_id, start_date, end_date) VALUES ($1,$2,$3,$4,$5)`, s.Service, s.Price, s.UserID, s.StartDate, s.EndDate)
 	if err != nil {
 		log.Printf("insert error: %v", err)
@@ -31,7 +32,7 @@ func (r *PostgresSubs) CreateSubRepo(ctx context.Context, s model.SubscriptionDB
 	return nil
 }
 
-func (r *PostgresSubs) ReadSubRepo(ctx context.Context, id int) (model.SubscriptionDB, error) {
+func (r *PostgresSubs) ReadColumn(ctx context.Context, id int) (model.SubscriptionDB, error) {
 	const q = `SELECT id, service, price, user_id, start_date, end_date FROM subs_table WHERE id = $1`
 	var s model.SubscriptionDB
 	err := r.DB.QueryRowContext(ctx, q, id).Scan(
@@ -46,7 +47,7 @@ func (r *PostgresSubs) ReadSubRepo(ctx context.Context, id int) (model.Subscript
 	return s, nil
 }
 
-func (r *PostgresSubs) PatchSubByID(ctx context.Context, id int, s model.Subscription) error {
+func (r *PostgresSubs) PatchColumnByID(ctx context.Context, id int, s model.Subscription) error {
 	const q = `SELECT id, service, price, user_id, start_date, end_date FROM subs_table WHERE id = $1`
 	var old model.SubscriptionDB
 	err := r.DB.QueryRowContext(ctx, q, id).Scan(
@@ -85,5 +86,21 @@ func (r *PostgresSubs) PatchSubByID(ctx context.Context, id int, s model.Subscri
 		return err
 	}
 
+	return nil
+}
+
+func (r *PostgresSubs) DeleteColumnByID(ctx context.Context, id int) error {
+	const q = `DELETE FROM subs_table WHERE id = $1`
+	row, err := r.DB.ExecContext(ctx, q, id)
+	if err != nil {
+		return nil
+	}
+	affected, err := row.RowsAffected()
+	if err != nil {
+		return nil
+	}
+	if affected == 0 {
+		return sql.ErrNoRows
+	}
 	return nil
 }

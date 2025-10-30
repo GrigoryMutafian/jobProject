@@ -19,7 +19,7 @@ func Init(uc *usecase.SubUsecase) error {
 	return nil
 }
 
-func CreateSub(w http.ResponseWriter, r *http.Request) {
+func CreateColumn(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method Not Allowed: ", http.StatusMethodNotAllowed)
 		return
@@ -37,7 +37,7 @@ func CreateSub(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := subUC.CreateSubUC(r.Context(), newSub); err != nil {
+	if err := subUC.CreateColumnUC(r.Context(), newSub); err != nil {
 		switch {
 		case usecase.IsValidationErr(err):
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -76,7 +76,7 @@ func ReadSubByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sub, err := subUC.ReadSubUC(r.Context(), idInt)
+	sub, err := subUC.ReadColumnUC(r.Context(), idInt)
 	if err != nil {
 		switch {
 		case usecase.IsValidationErr(err):
@@ -94,12 +94,13 @@ func ReadSubByID(w http.ResponseWriter, r *http.Request) {
 	err = json.NewEncoder(w).Encode(response)
 	if err != nil {
 		http.Error(w, "JSON encoding error: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 }
 
-func PatchSubByID(w http.ResponseWriter, r *http.Request) {
+func PatchColumnByID(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPatch {
 		http.Error(w, "Method Not Allowed: ", http.StatusMethodNotAllowed)
 		return
@@ -128,7 +129,7 @@ func PatchSubByID(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "pars error", http.StatusBadRequest)
 		return
 	}
-	err = subUC.PatchSubByID(r.Context(), idInt, patchBody)
+	err = subUC.PatchColumnByID(r.Context(), idInt, patchBody)
 	if err != nil {
 		switch {
 		case usecase.IsValidationErr(err):
@@ -140,12 +141,56 @@ func PatchSubByID(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	response := map[int]string{idInt: "updated"}
 	err = json.NewEncoder(w).Encode(response)
 	if err != nil {
 		http.Error(w, "JSON encoding error: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
+
+}
+
+func DeleteColumnByID(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Method Not Allowed: ", http.StatusMethodNotAllowed)
+		return
+	}
+
+	idStr := r.URL.Query().Get("id")
+	if idStr == "" {
+		http.Error(w, "id input is clear", http.StatusBadRequest)
+		return
+	}
+
+	idInt, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "pars error", http.StatusBadRequest)
+		return
+	}
+
+	err = subUC.DeleteColumnByID(r.Context(), idInt)
+	if err != nil {
+		switch {
+		case usecase.IsValidationErr(err):
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		case usecase.IsConflictErr(err):
+			http.Error(w, err.Error(), http.StatusConflict)
+		default:
+			http.Error(w, "internal error: "+err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	text := fmt.Sprintf("deleted column id: %d", idInt)
+	response := map[string]string{text: "OK"}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		http.Error(w, "JSON encoding error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 }

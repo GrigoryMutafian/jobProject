@@ -26,7 +26,7 @@ func NewSubUsecase(repo repository.SubsRepository) *SubUsecase {
 	return &SubUsecase{Repo: repo}
 }
 
-func (uc *SubUsecase) CreateSubUC(ctx context.Context, s model.Subscription) error {
+func (uc *SubUsecase) CreateColumnUC(ctx context.Context, s model.Subscription) error {
 	err := validateSubscription(s)
 	if err != nil {
 		return errors.Join(ErrValidation, err)
@@ -35,7 +35,7 @@ func (uc *SubUsecase) CreateSubUC(ctx context.Context, s model.Subscription) err
 	if err != nil {
 		return errors.Join(ErrValidation, err)
 	}
-	return uc.Repo.CreateSubRepo(ctx, dbSub)
+	return uc.Repo.CreateColumn(ctx, dbSub)
 }
 
 func validateSubscription(s model.Subscription) error {
@@ -79,18 +79,18 @@ func monthYearValidate(start string, end *string) error {
 	return nil
 }
 
-func (uc *SubUsecase) ReadSubUC(ctx context.Context, id int) (model.SubscriptionDB, error) {
+func (uc *SubUsecase) ReadColumnUC(ctx context.Context, id int) (model.SubscriptionDB, error) {
 	if id <= 0 {
 		return model.SubscriptionDB{}, errors.Join(ErrValidation, errors.New("id in query must be not less then 0"))
 	}
-	sub, err := uc.Repo.ReadSubRepo(ctx, id)
+	sub, err := uc.Repo.ReadColumn(ctx, id)
 	if err != nil {
 		return model.SubscriptionDB{}, err
 	}
 	return sub, nil
 }
 
-func (uc *SubUsecase) PatchSubByID(ctx context.Context, id int, s model.Subscription) error {
+func (uc *SubUsecase) PatchColumnByID(ctx context.Context, id int, s model.Subscription) error {
 	err := validateSubscription(s)
 	if s.Service == nil && s.Price == nil && s.UserID == nil && s.StartDate == nil && s.EndDate == nil {
 		return errors.Join(ErrValidation, errors.New("no data to update"))
@@ -104,7 +104,18 @@ func (uc *SubUsecase) PatchSubByID(ctx context.Context, id int, s model.Subscrip
 	if err != nil {
 		return errors.Join(ErrValidation, err)
 	}
-	err = uc.Repo.PatchSubByID(ctx, id, s)
+	err = uc.Repo.PatchColumnByID(ctx, id, s)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (uc *SubUsecase) DeleteColumnByID(ctx context.Context, id int) error {
+	if id <= 0 {
+		return errors.Join(ErrValidation, errors.New("id in query must be not less then 0"))
+	}
+	err := uc.Repo.DeleteColumnByID(ctx, id)
 	if err != nil {
 		return err
 	}
