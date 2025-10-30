@@ -39,18 +39,20 @@ func (uc *SubUsecase) CreateSubUC(ctx context.Context, s model.Subscription) err
 }
 
 func validateSubscription(s model.Subscription) error {
-	if *s.Price < 0 {
+	if s.Price != nil && *s.Price < 0 {
 		return errors.New("price must be not less then 0")
 	}
-	if utf8.RuneCountInString(*s.Service) == 0 && strings.TrimSpace(*s.Service) == "" {
+	if s.Service != nil && (utf8.RuneCountInString(*s.Service) == 0 || strings.TrimSpace(*s.Service) == "") {
 		return errors.New("service name is empty")
 	}
-	if utf8.RuneCountInString(*s.UserID) != 36 {
+	if s.UserID != nil && utf8.RuneCountInString(*s.UserID) != 36 {
 		return errors.New("validate userID length error, must be 36 chars")
 	}
-	err := monthYearValidate(*s.StartDate, s.EndDate)
-	if err != nil {
-		return errors.Join(ErrValidation, err)
+	if s.StartDate != nil {
+		err := monthYearValidate(*s.StartDate, s.EndDate)
+		if err != nil {
+			return errors.Join(ErrValidation, err)
+		}
 	}
 	return nil
 }
@@ -90,6 +92,9 @@ func (uc *SubUsecase) ReadSubUC(ctx context.Context, id int) (model.Subscription
 
 func (uc *SubUsecase) PatchSubByID(ctx context.Context, id int, s model.Subscription) error {
 	err := validateSubscription(s)
+	if s.Service == nil && s.Price == nil && s.UserID == nil && s.StartDate == nil && s.EndDate == nil {
+		return errors.Join(ErrValidation, errors.New("no data to update"))
+	}
 	if id <= 0 {
 		return errors.Join(ErrValidation, errors.New("id in query must be not less then 0"))
 	}

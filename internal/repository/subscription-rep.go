@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"jobProject/internal/conv"
 	"jobProject/internal/model"
 	"log"
 	"time"
@@ -54,8 +55,7 @@ func (r *PostgresSubs) PatchSubByID(ctx context.Context, id int, s model.Subscri
 	if errors.Is(err, sql.ErrNoRows) {
 		return sql.ErrNoRows
 	}
-	var timeS *time.Time
-	var timeE *time.Time
+
 	if s.Service == nil {
 		s.Service = &old.Service
 	}
@@ -65,11 +65,19 @@ func (r *PostgresSubs) PatchSubByID(ctx context.Context, id int, s model.Subscri
 	if s.UserID == nil {
 		s.UserID = &old.UserID
 	}
-	if s.StartDate == nil {
+	var timeS *time.Time
+	if s.StartDate == nil && old.StartDate != (time.Time{}) {
 		timeS = &old.StartDate
+	} else if s.StartDate != nil {
+		parsed, _ := conv.ParseMMYYYY(*s.StartDate)
+		timeS = &parsed
 	}
+	var timeE *time.Time
 	if s.EndDate == nil {
 		timeE = old.EndDate
+	} else if s.EndDate != nil {
+		parsed, _ := conv.ParseMMYYYY(*s.EndDate)
+		timeE = &parsed
 	}
 	const q1 = `UPDATE subs_table SET service = $1, price = $2, user_id = $3, start_date = $4, end_date = $5 WHERE id = $6`
 	_, err = r.DB.ExecContext(ctx, q1, *s.Service, *s.Price, *s.UserID, timeS, timeE, id)
