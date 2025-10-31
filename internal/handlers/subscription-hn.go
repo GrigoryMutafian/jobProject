@@ -8,6 +8,8 @@ import (
 	"jobProject/internal/usecase"
 	"net/http"
 	"strconv"
+
+	_ "jobProject/docs"
 )
 
 var subUC *usecase.SubUsecase
@@ -20,6 +22,16 @@ func Init(uc *usecase.SubUsecase) error {
 	return nil
 }
 
+// @Summary Создать подписку
+// @Description Создает новую запись о подписке
+// @Tags subscriptions
+// @Accept json
+// @Produce json
+// @Param subscription body model.Subscription true "Данные подписки"
+// @Success 201 {object} map[string]string
+// @Failure 400 {object} map[string]string "Некорректный JSON или параметры"
+// @Failure 409 {object} map[string]string "Конфликт"
+// @Router /CreateColumn [post]
 func CreateColumn(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method Not Allowed: ", http.StatusMethodNotAllowed)
@@ -59,6 +71,18 @@ func CreateColumn(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// @Summary Получить подписку по ID
+// @Description Возвращает подписку по идентификатору ID
+// @Tags subscriptions
+// @Accept json
+// @Produce json
+// @Param id query int true "ID подписки"
+// @Success 200 {object} map[string]model.SubscriptionDB
+// @Failure 400 {object} map[string]string "Некорректный id или ошибка"
+// @Failure 404 {object} map[string]string "Подписка не найдена"
+// @Failure 409 {object} map[string]string "Конфликт"
+// @Failure 500 {object} map[string]string "Внутренняя ошибка"
+// @Router /ReadSubByID [get]
 func ReadSubByID(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method Not Allowed: ", http.StatusMethodNotAllowed)
@@ -101,6 +125,19 @@ func ReadSubByID(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// @Summary Частично обновить подписку по ID
+// @Description Обновляет выбранные поля записи
+// @Tags subscriptions
+// @Accept json
+// @Produce json
+// @Param id query int true "ID подписки"
+// @Param subscription body model.Subscription true "Патч-данные"
+// @Success 200 {object} map[int]string "ID -> updated"
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string "Подписка не найдена"
+// @Failure 409 {object} map[string]string "Конфликт"
+// @Failure 500 {object} map[string]string
+// @Router /PatchColumnByID [patch]
 func PatchColumnByID(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPatch {
 		http.Error(w, "Method Not Allowed: ", http.StatusMethodNotAllowed)
@@ -154,6 +191,18 @@ func PatchColumnByID(w http.ResponseWriter, r *http.Request) {
 
 }
 
+// @Summary Удалить подписку по ID
+// @Description Удаляет запись о подписке
+// @Tags subscriptions
+// @Accept json
+// @Produce json
+// @Param id query int true "ID подписки"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string "Подписка не найдена"
+// @Failure 409 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /DeleteColumnByID [delete]
 func DeleteColumnByID(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
 		http.Error(w, "Method Not Allowed: ", http.StatusMethodNotAllowed)
@@ -196,6 +245,20 @@ func DeleteColumnByID(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// @Summary Получить сумму подписок за период
+// @Description Считает суммарную стоимость подписок по id пользователя, названию подписки и периоду
+// @Tags subscriptions
+// @Accept json
+// @Produce json
+// @Param user_id query string true "ID пользователя (uuid)"
+// @Param service query string true "Название сервиса"
+// @Param date_from query string true "Период начала подписки MM-YYYY"
+// @Param date_to query string true "Период конца подписки MM-YYYY"
+// @Success 200 {object} map[string]int
+// @Failure 400 {object} map[string]string
+// @Failure 409 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /total [get]
 func TotalPriceByPeriod(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)

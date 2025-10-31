@@ -125,10 +125,10 @@ func (uc *SubUsecase) DeleteColumnByID(ctx context.Context, id int) error {
 
 func (uc *SubUsecase) TotalPriceByPeriod(ctx context.Context, userID, service string, from, to time.Time) (int, error) {
 	if userID == "" || service == "" {
-		return 0, errors.Join(ErrValidation, errors.New("user_id/service required"))
+		return 0, errors.Join(ErrValidation, errors.New("user_id and service required"))
 	}
 	if from.After(to) {
-		return 0, errors.Join(ErrValidation, errors.New("invalid period: from > to"))
+		return 0, errors.Join(ErrValidation, errors.New("error perion end_date must be later then start_date"))
 	}
 
 	total, err := uc.Repo.TotalPriceByPeriod(ctx, userID, service, from, to)

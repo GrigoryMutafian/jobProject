@@ -9,6 +9,8 @@ import (
 	"jobProject/internal/usecase"
 	"log"
 	"net/http"
+
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 func main() {
@@ -31,6 +33,8 @@ func main() {
 	http.HandleFunc("/PatchColumnByID", handlers.PatchColumnByID)
 	http.HandleFunc("/DeleteColumnByID", handlers.DeleteColumnByID)
 	http.HandleFunc("/TotalPriceByPeriod", handlers.TotalPriceByPeriod)
+	http.HandleFunc("/swagger/", httpSwagger.WrapHandler)
+
 	log.Println("listening on :8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatalf("server error: %v", err)

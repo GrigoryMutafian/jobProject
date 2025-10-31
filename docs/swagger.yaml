@@ -1,0 +1,275 @@
+definitions:
+  model.Subscription:
+    properties:
+      end_date:
+        type: string
+      id:
+        type: integer
+      price:
+        type: integer
+      service:
+        type: string
+      start_date:
+        type: string
+      user_id:
+        type: string
+    type: object
+  model.SubscriptionDB:
+    properties:
+      endDate:
+        type: string
+      id:
+        type: integer
+      price:
+        type: integer
+      service:
+        type: string
+      startDate:
+        type: string
+      userID:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /CreateColumn:
+    post:
+      consumes:
+      - application/json
+      description: Создает новую запись о подписке
+      parameters:
+      - description: Данные подписки
+        in: body
+        name: subscription
+        required: true
+        schema:
+          $ref: '#/definitions/model.Subscription'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Некорректный JSON или параметры
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Конфликт
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Создать подписку
+      tags:
+      - subscriptions
+  /DeleteColumnByID:
+    delete:
+      consumes:
+      - application/json
+      description: Удаляет запись о подписке
+      parameters:
+      - description: ID подписки
+        in: query
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Подписка не найдена
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Удалить подписку по ID
+      tags:
+      - subscriptions
+  /PatchColumnByID:
+    patch:
+      consumes:
+      - application/json
+      description: Обновляет выбранные поля записи
+      parameters:
+      - description: ID подписки
+        in: query
+        name: id
+        required: true
+        type: integer
+      - description: Патч-данные
+        in: body
+        name: subscription
+        required: true
+        schema:
+          $ref: '#/definitions/model.Subscription'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ID -> updated
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Подписка не найдена
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Конфликт
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Частично обновить подписку по ID
+      tags:
+      - subscriptions
+  /ReadSubByID:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает подписку по идентификатору ID
+      parameters:
+      - description: ID подписки
+        in: query
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/model.SubscriptionDB'
+            type: object
+        "400":
+          description: Некорректный id или ошибка
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Подписка не найдена
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Конфликт
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Внутренняя ошибка
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получить подписку по ID
+      tags:
+      - subscriptions
+  /total:
+    get:
+      consumes:
+      - application/json
+      description: Считает суммарную стоимость подписок по id пользователя, названию
+        подписки и периоду
+      parameters:
+      - description: ID пользователя (uuid)
+        in: query
+        name: user_id
+        required: true
+        type: string
+      - description: Название сервиса
+        in: query
+        name: service
+        required: true
+        type: string
+      - description: Период начала подписки MM-YYYY
+        in: query
+        name: date_from
+        required: true
+        type: string
+      - description: Период конца подписки MM-YYYY
+        in: query
+        name: date_to
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: integer
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получить сумму подписок за период
+      tags:
+      - subscriptions
+swagger: "2.0"
