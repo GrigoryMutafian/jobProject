@@ -7,6 +7,7 @@ import (
 	"jobProject/internal/model"
 	"jobProject/internal/repository"
 	"strings"
+	"time"
 	"unicode/utf8"
 )
 
@@ -120,4 +121,19 @@ func (uc *SubUsecase) DeleteColumnByID(ctx context.Context, id int) error {
 		return err
 	}
 	return nil
+}
+
+func (uc *SubUsecase) TotalPriceByPeriod(ctx context.Context, userID, service string, from, to time.Time) (int, error) {
+	if userID == "" || service == "" {
+		return 0, errors.Join(ErrValidation, errors.New("user_id/service required"))
+	}
+	if from.After(to) {
+		return 0, errors.Join(ErrValidation, errors.New("invalid period: from > to"))
+	}
+
+	total, err := uc.Repo.TotalPriceByPeriod(ctx, userID, service, from, to)
+	if err != nil {
+		return 0, err
+	}
+	return total, nil
 }

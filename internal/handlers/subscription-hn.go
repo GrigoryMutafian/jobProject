@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"jobProject/internal/conv"
 	"jobProject/internal/model"
 	"jobProject/internal/usecase"
 	"net/http"
@@ -193,4 +194,46 @@ func DeleteColumnByID(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "JSON encoding error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+}
+
+func TotalPriceByPeriod(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	userID := r.URL.Query().Get("user_id")
+	service := r.URL.Query().Get("service")
+	dateFrom := r.URL.Query().Get("date_from")
+	dateTo := r.URL.Query().Get("date_to")
+
+	if userID == "" || service == "" || dateFrom == "" || dateTo == "" {
+		http.Error(w, "user_id, service, date_from, date_to required", http.StatusBadRequest)
+		return
+	}
+
+	fromTime, err := conv.ParseMMYYYY(dateFrom)
+	if err != nil {
+		http.Error(w, "wrong date_from format", http.StatusBadRequest)
+		return
+	}
+	toTime, err := conv.ParseMMYYYY(dateTo)
+	if err != nil {
+		http.Error(w, "wrong date_to format", http.StatusBadRequest)
+		return
+	}
+
+	total, err := subUC.TotalPriceByPeriod(r.Context(), userID, service, fromTime, toTime)
+	if err != nil {
+		if usecase.IsValidationErr(err) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]int{"total": total})
 }

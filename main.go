@@ -30,6 +30,7 @@ func main() {
 	http.HandleFunc("/ReadSubByID", handlers.ReadSubByID)
 	http.HandleFunc("/PatchColumnByID", handlers.PatchColumnByID)
 	http.HandleFunc("/DeleteColumnByID", handlers.DeleteColumnByID)
+	http.HandleFunc("/TotalPriceByPeriod", handlers.TotalPriceByPeriod)
 	log.Println("listening on :8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatalf("server error: %v", err)

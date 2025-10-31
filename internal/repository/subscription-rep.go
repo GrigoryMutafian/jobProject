@@ -15,6 +15,7 @@ type SubsRepository interface {
 	ReadColumn(ctx context.Context, id int) (model.SubscriptionDB, error)
 	PatchColumnByID(ctx context.Context, id int, s model.Subscription) error
 	DeleteColumnByID(ctx context.Context, id int) error
+	TotalPriceByPeriod(ctx context.Context, userID, service string, from, to time.Time) (int, error)
 }
 
 type PostgresSubs struct {
@@ -103,4 +104,14 @@ func (r *PostgresSubs) DeleteColumnByID(ctx context.Context, id int) error {
 		return sql.ErrNoRows
 	}
 	return nil
+}
+
+func (r *PostgresSubs) TotalPriceByPeriod(ctx context.Context, userID, service string, from, to time.Time) (int, error) {
+	const q = `SELECT COALESCE(SUM(price), 0) FROM subs_table WHERE user_id = $1 AND service = $2 AND start_date >= $3 AND (end_date <= $4 OR end_date IS NULL)`
+	var total int
+	err := r.DB.QueryRowContext(ctx, q, userID, service, from, to).Scan(&total)
+	if err != nil {
+		return 0, err
+	}
+	return total, nil
 }
