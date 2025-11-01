@@ -258,7 +258,7 @@ func DeleteColumnByID(w http.ResponseWriter, r *http.Request) {
 // @Failure 400 {object} map[string]string
 // @Failure 409 {object} map[string]string
 // @Failure 500 {object} map[string]string
-// @Router /total [get]
+// @Router /TotalPriceByPeriod [get]
 func TotalPriceByPeriod(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
