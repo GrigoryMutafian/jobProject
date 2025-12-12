@@ -113,7 +113,8 @@ func ReadSubByID(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	text := fmt.Sprintf("column id: %d", idInt)
 	response := map[string]model.SubscriptionDB{text: sub}
 	err = json.NewEncoder(w).Encode(response)
@@ -121,8 +122,7 @@ func ReadSubByID(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "JSON encoding error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
+
 }
 
 // @Summary Частично обновить подписку по ID
@@ -233,11 +233,10 @@ func DeleteColumnByID(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-
-	text := fmt.Sprintf("deleted column id: %d", idInt)
-	response := map[string]string{text: "OK"}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	text := fmt.Sprintf("deleted column id: %d", idInt)
+	response := map[string]string{text: "OK"}
 	err = json.NewEncoder(w).Encode(response)
 	if err != nil {
 		http.Error(w, "JSON encoding error: "+err.Error(), http.StatusInternalServerError)
@@ -299,4 +298,25 @@ func TotalPriceByPeriod(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]int{"total": total})
+}
+
+func GetList(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	list, err := subUC.GetList(r.Context())
+	if err != nil {
+		if usecase.IsValidationErr(err) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(list)
 }

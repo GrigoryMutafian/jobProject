@@ -16,6 +16,7 @@ type SubsRepository interface {
 	PatchColumnByID(ctx context.Context, id int, s model.Subscription) error
 	DeleteColumnByID(ctx context.Context, id int) error
 	TotalPriceByPeriod(ctx context.Context, userID, service string, from, to time.Time) (int, error)
+	GetList(ctx context.Context) ([]model.SubscriptionDB, error)
 }
 
 type PostgresSubs struct {
@@ -114,4 +115,33 @@ func (r *PostgresSubs) TotalPriceByPeriod(ctx context.Context, userID, service s
 		return 0, err
 	}
 	return total, nil
+}
+
+func (r *PostgresSubs) GetList(ctx context.Context) ([]model.SubscriptionDB, error) {
+	const q = `SELECT * FROM subs`
+	rows, err := r.DB.QueryContext(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Printf("error closing rows: %v", err)
+		}
+	}()
+	var subs []model.SubscriptionDB
+	for rows.Next() {
+		var sub model.SubscriptionDB
+		err := rows.Scan(&sub.ID, &sub.Service, &sub.Price, &sub.UserID, &sub.StartDate, &sub.EndDate)
+		if err != nil {
+			return nil, err
+		}
+		subs = append(subs, sub)
+	}
+	err = rows.Err()
+	if err != nil {
+		return nil, err
+	}
+
+	return subs, nil
 }
