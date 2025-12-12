@@ -137,3 +137,12 @@ func (uc *SubUsecase) TotalPriceByPeriod(ctx context.Context, userID, service st
 	}
 	return total, nil
 }
+
+func (uc *SubUsecase) GetList(ctx context.Context) ([]model.SubscriptionDB, error) {
+	list, err := uc.Repo.GetList(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return list, nil
+}
