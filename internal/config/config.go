@@ -79,7 +79,7 @@ func (c *Config) Validate() error {
 		"warn":  true,
 		"error": true,
 	}
-	if !validLevels[c.Logging.Level] { //
+	if !validLevels[c.Logging.Level] {
 		return fmt.Errorf("invalid log level: %s (must be debug, info, warn, or error)", c.Logging.Level)
 	}
 
