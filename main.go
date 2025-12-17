@@ -34,6 +34,7 @@ func main() {
 	http.HandleFunc("/DeleteColumnByID", handlers.DeleteColumnByID)
 	http.HandleFunc("/TotalPriceByPeriod", handlers.TotalPriceByPeriod)
 	http.HandleFunc("/swagger/", httpSwagger.WrapHandler)
+	http.HandleFunc("/ListSubscriptions", handlers.ListSubscriptions)
 
 	log.Println("listening on :8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil && !errors.Is(err, http.ErrServerClosed) {

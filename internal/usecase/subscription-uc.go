@@ -2,7 +2,9 @@ package usecase
 
 import (
 	"context"
+	"database/sql"
 	"errors"
+	"fmt"
 	"jobProject/internal/conv"
 	"jobProject/internal/model"
 	"jobProject/internal/repository"
@@ -93,17 +95,27 @@ func (uc *SubUsecase) ReadColumnUC(ctx context.Context, id int) (model.Subscript
 
 func (uc *SubUsecase) PatchColumnByID(ctx context.Context, id int, s model.Subscription) error {
 	err := validateSubscription(s)
+	if err != nil {
+		return errors.Join(ErrValidation, err)
+	}
 	if s.Service == nil && s.Price == nil && s.UserID == nil && s.StartDate == nil && s.EndDate == nil {
 		return errors.Join(ErrValidation, errors.New("no data to update"))
 	}
 	if id <= 0 {
 		return errors.Join(ErrValidation, errors.New("id in query must be not less then 0"))
 	}
+
+	_, err = uc.Repo.ReadColumn(ctx, id)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return errors.Join(errors.New("sub not found: "), err)
+		}
+		return err
+	}
+
 	if s.Service != nil && strings.TrimSpace(*s.Service) == "" {
 		return errors.Join(ErrValidation, errors.New("service name is empty"))
-	}
-	if err != nil {
-		return errors.Join(ErrValidation, err)
 	}
 	err = uc.Repo.PatchColumnByID(ctx, id, s)
 	if err != nil {
@@ -138,11 +150,41 @@ func (uc *SubUsecase) TotalPriceByPeriod(ctx context.Context, userID, service st
 	return total, nil
 }
 
-func (uc *SubUsecase) GetList(ctx context.Context) ([]model.SubscriptionDB, error) {
-	list, err := uc.Repo.GetList(ctx)
-	if err != nil {
-		return nil, err
+func (r *SubUsecase) ListSubscriptions(
+	ctx context.Context,
+	userID string,
+	params model.PaginationParams,
+) (model.PaginatedResponse, error) {
+	if userID == "" {
+		return model.PaginatedResponse{}, errors.New("user_id is required")
 	}
 
-	return list, nil
+	params.Validate()
+
+	subscriptions, err := r.Repo.ListSubscriptions(ctx, userID, params.Limit, params.GetOffset())
+	if err != nil {
+		return model.PaginatedResponse{}, fmt.Errorf("failed to list subscriptions: %w", err)
+	}
+
+	total, err := r.Repo.CountSubscription(ctx, userID)
+	if err != nil {
+		return model.PaginatedResponse{}, fmt.Errorf("failed to count subscriptions: %w", err)
+	}
+
+	totalPages := 0
+	if total > 0 {
+		totalPages = (total + params.Limit - 1) / params.Limit
+	}
+
+	response := model.PaginatedResponse{
+		Data: subscriptions,
+		Pagination: model.PaginationMeta{
+			Page:       params.Page,
+			Limit:      params.Limit,
+			Total:      total,
+			TotalPages: totalPages,
+		},
+	}
+
+	return response, nil
 }

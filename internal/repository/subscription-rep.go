@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"jobProject/internal/conv"
 	"jobProject/internal/model"
 	"log"
@@ -16,7 +17,8 @@ type SubsRepository interface {
 	PatchColumnByID(ctx context.Context, id int, s model.Subscription) error
 	DeleteColumnByID(ctx context.Context, id int) error
 	TotalPriceByPeriod(ctx context.Context, userID, service string, from, to time.Time) (int, error)
-	GetList(ctx context.Context) ([]model.SubscriptionDB, error)
+	ListSubscriptions(ctx context.Context, userID string, limit int, offset int) ([]model.SubscriptionDB, error)
+	CountSubscription(ctx context.Context, userID string) (int, error)
 }
 
 type PostgresSubs struct {
@@ -117,31 +119,59 @@ func (r *PostgresSubs) TotalPriceByPeriod(ctx context.Context, userID, service s
 	return total, nil
 }
 
-func (r *PostgresSubs) GetList(ctx context.Context) ([]model.SubscriptionDB, error) {
-	const q = `SELECT * FROM subs`
-	rows, err := r.DB.QueryContext(ctx, q)
-	if err != nil {
-		return nil, err
-	}
+func (p *PostgresSubs) ListSubscriptions(ctx context.Context, userID string, limit int, offset int) ([]model.SubscriptionDB, error) {
 
+	query := `
+		SELECT id, service, price, user_id, start_date, end_date FROM subs_table WHERE user_id = $1 ORDER BY start_date DESC LIMIT $2 OFFSET $3
+	`
+
+	rows, err := p.DB.QueryContext(ctx, query, userID, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query subscriptions: %w", err)
+	}
 	defer func() {
 		if err := rows.Close(); err != nil {
 			log.Printf("error closing rows: %v", err)
 		}
 	}()
-	var subs []model.SubscriptionDB
+
+	var subscriptions []model.SubscriptionDB
+
 	for rows.Next() {
 		var sub model.SubscriptionDB
-		err := rows.Scan(&sub.ID, &sub.Service, &sub.Price, &sub.UserID, &sub.StartDate, &sub.EndDate)
+
+		err := rows.Scan(
+			&sub.ID,
+			&sub.Service,
+			&sub.Price,
+			&sub.UserID,
+			&sub.StartDate,
+			&sub.EndDate,
+		)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to scan subscription: %w", err)
 		}
-		subs = append(subs, sub)
-	}
-	err = rows.Err()
-	if err != nil {
-		return nil, err
+
+		subscriptions = append(subscriptions, sub)
 	}
 
-	return subs, nil
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration error: %w", err)
+	}
+
+	return subscriptions, nil
+}
+
+func (r *PostgresSubs) CountSubscription(ctx context.Context, userID string) (int, error) {
+	const q = `SELECT COUNT(*) FROM subs_table WHERE user_id = $1`
+
+	var count int
+
+	err := r.DB.QueryRowContext(ctx, q, userID).Scan(&count)
+
+	if err != nil {
+		return 0, errors.Join(errors.New("failed rows counting: "), err)
+	}
+
+	return count, nil
 }
