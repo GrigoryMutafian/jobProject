@@ -3,16 +3,25 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"jobProject/internal/api"
 	"jobProject/internal/conv"
 	"jobProject/internal/model"
 	"jobProject/internal/usecase"
+	"log"
 	"net/http"
+	"regexp"
 	"strconv"
 
 	_ "jobProject/docs"
 )
 
 var subUC *usecase.SubUsecase
+
+var uuidRegex = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+
+func validateUUID(uuid string) bool {
+	return uuidRegex.MatchString(uuid)
+}
 
 func Init(uc *usecase.SubUsecase) error {
 	if uc == nil {
@@ -274,6 +283,11 @@ func TotalPriceByPeriod(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !validateUUID(userID) {
+		http.Error(w, "invalid user_id format: must be a valid UUID (e.g., 70601fee-2bf1-4721-ae6f-7636e79a0cbb)", http.StatusBadRequest)
+		return
+	}
+
 	fromTime, err := conv.ParseMMYYYY(dateFrom)
 	if err != nil {
 		http.Error(w, "wrong date_from format", http.StatusBadRequest)
@@ -300,23 +314,67 @@ func TotalPriceByPeriod(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]int{"total": total})
 }
 
-func GetList(w http.ResponseWriter, r *http.Request) {
+func ListSubscriptions(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	list, err := subUC.GetList(r.Context())
-	if err != nil {
-		if usecase.IsValidationErr(err) {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+	userID := r.URL.Query().Get("user_id")
+	if userID == "" {
+		http.Error(w, "user_id parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	if !validateUUID(userID) {
+		http.Error(w, "invalid user_id format: must be a valid UUID (70601fee-2bf1-4721-ae6f-7636e79a0cbb)", http.StatusBadRequest)
+		return
+	}
+
+	pageStr := r.URL.Query().Get("page")
+	limitStr := r.URL.Query().Get("limit")
+
+	params := api.PaginationParams{
+		Page:  1,
+		Limit: 10,
+	}
+
+	if pageStr != "" {
+		page, err := strconv.Atoi(pageStr)
+		if err != nil || page < 1 {
+			http.Error(w, "invalid page parameter: must be a positive integer", http.StatusBadRequest)
+			return
 		}
+		params.Page = page
+	}
+
+	if limitStr != "" {
+		limit, err := strconv.Atoi(limitStr)
+		if err != nil || limit < 1 {
+			http.Error(w, "invalid limit parameter: must be a positive integer", http.StatusBadRequest)
+			return
+		}
+		if limit > 100 {
+			http.Error(w, "invalid limit parameter: maximum value is 100", http.StatusBadRequest)
+			return
+		}
+		params.Limit = limit
+	}
+
+	params.Validate()
+
+	response, err := subUC.ListSubscriptions(r.Context(), userID, params)
+	if err != nil {
+		log.Printf("error listing subscriptions: %v", err)
+		http.Error(w, fmt.Sprintf("internal error: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(list)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("error encoding response: %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
 }
