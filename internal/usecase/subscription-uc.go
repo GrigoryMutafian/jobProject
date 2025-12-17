@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"jobProject/internal/api"
 	"jobProject/internal/conv"
 	"jobProject/internal/model"
 	"jobProject/internal/repository"
@@ -153,22 +154,22 @@ func (uc *SubUsecase) TotalPriceByPeriod(ctx context.Context, userID, service st
 func (r *SubUsecase) ListSubscriptions(
 	ctx context.Context,
 	userID string,
-	params model.PaginationParams,
-) (model.PaginatedResponse, error) {
+	params api.PaginationParams,
+) (api.PaginatedResponse, error) {
 	if userID == "" {
-		return model.PaginatedResponse{}, errors.New("user_id is required")
+		return api.PaginatedResponse{}, errors.New("user_id is required")
 	}
 
 	params.Validate()
 
 	subscriptions, err := r.Repo.ListSubscriptions(ctx, userID, params.Limit, params.GetOffset())
 	if err != nil {
-		return model.PaginatedResponse{}, fmt.Errorf("failed to list subscriptions: %w", err)
+		return api.PaginatedResponse{}, fmt.Errorf("failed to list subscriptions: %w", err)
 	}
 
 	total, err := r.Repo.CountSubscription(ctx, userID)
 	if err != nil {
-		return model.PaginatedResponse{}, fmt.Errorf("failed to count subscriptions: %w", err)
+		return api.PaginatedResponse{}, fmt.Errorf("failed to count subscriptions: %w", err)
 	}
 
 	totalPages := 0
@@ -176,9 +177,9 @@ func (r *SubUsecase) ListSubscriptions(
 		totalPages = (total + params.Limit - 1) / params.Limit
 	}
 
-	response := model.PaginatedResponse{
+	response := api.PaginatedResponse{
 		Data: subscriptions,
-		Pagination: model.PaginationMeta{
+		Pagination: api.PaginationMeta{
 			Page:       params.Page,
 			Limit:      params.Limit,
 			Total:      total,

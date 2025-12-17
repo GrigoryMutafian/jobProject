@@ -1,4 +1,6 @@
-package model
+package api
+
+import "jobProject/internal/model"
 
 type PaginationParams struct {
 	Page  int
@@ -31,6 +33,6 @@ type PaginationMeta struct {
 }
 
 type PaginatedResponse struct {
-	Data       []SubscriptionDB `json:"data"`
-	Pagination PaginationMeta   `json:"pagination"`
+	Data       []model.SubscriptionDB `json:"data"`
+	Pagination PaginationMeta         `json:"pagination"`
 }

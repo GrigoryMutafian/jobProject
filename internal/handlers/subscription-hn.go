@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"jobProject/internal/api"
 	"jobProject/internal/conv"
 	"jobProject/internal/model"
 	"jobProject/internal/usecase"
@@ -326,14 +327,14 @@ func ListSubscriptions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !validateUUID(userID) {
-		http.Error(w, "invalid user_id format: must be a valid UUID (e.g., 70601fee-2bf1-4721-ae6f-7636e79a0cbb)", http.StatusBadRequest)
+		http.Error(w, "invalid user_id format: must be a valid UUID (70601fee-2bf1-4721-ae6f-7636e79a0cbb)", http.StatusBadRequest)
 		return
 	}
 
 	pageStr := r.URL.Query().Get("page")
 	limitStr := r.URL.Query().Get("limit")
 
-	params := model.PaginationParams{
+	params := api.PaginationParams{
 		Page:  1,
 		Limit: 10,
 	}
