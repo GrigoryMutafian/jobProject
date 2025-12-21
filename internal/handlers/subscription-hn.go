@@ -8,6 +8,7 @@ import (
 	"jobProject/internal/model"
 	"jobProject/internal/usecase"
 	"log"
+	"log/slog"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -43,7 +44,10 @@ func Init(uc *usecase.SubUsecase) error {
 // @Router /CreateColumn [post]
 func CreateColumn(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method Not Allowed: ", http.StatusMethodNotAllowed)
+		slog.Warn("Method not allowed",
+			"method", r.Method,
+			"path", r.URL.Path)
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -53,23 +57,45 @@ func CreateColumn(w http.ResponseWriter, r *http.Request) {
 
 	var newSub model.Subscription
 
+	slog.Debug("Getting JSON with new column parametrs",
+		"table", "subs_table")
+
 	err := json.NewDecoder(r.Body).Decode(&newSub)
 	if err != nil {
-		http.Error(w, "Invalid JSON: "+err.Error(), http.StatusBadRequest)
+		slog.Warn("Some data is missing",
+			"body", newSub,
+			"need", "service, price, user_id, start_date, end_date",
+			"error", err)
+
 		return
 	}
 
 	if err := subUC.CreateColumnUC(r.Context(), newSub); err != nil {
 		switch {
 		case usecase.IsValidationErr(err):
+			slog.Warn("Validation error while subscription create",
+				"error", err,
+				"service", newSub.Service,
+				"user_id", newSub.UserID)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		case usecase.IsConflictErr(err):
+			slog.Warn("Conflict error while subscription create",
+				"error", err,
+				"service", newSub.Service,
+				"user_id", newSub.UserID)
 			http.Error(w, err.Error(), http.StatusConflict)
 		default:
-			http.Error(w, "internal error: "+err.Error(), http.StatusInternalServerError)
+			slog.Error("Internal error while subscription create",
+				"error", err,
+				"service", newSub.Service,
+				"user_id", newSub.UserID)
+			http.Error(w, "internal error", http.StatusInternalServerError)
+
 		}
 		return
 	}
+
+	slog.Info("Subscription created", "service", *newSub.Service)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -94,7 +120,10 @@ func CreateColumn(w http.ResponseWriter, r *http.Request) {
 // @Router /ReadSubByID [get]
 func ReadSubByID(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method Not Allowed: ", http.StatusMethodNotAllowed)
+		slog.Warn("Method not allowed",
+			"method", r.Method,
+			"path", r.URL.Path)
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -149,7 +178,10 @@ func ReadSubByID(w http.ResponseWriter, r *http.Request) {
 // @Router /PatchColumnByID [patch]
 func PatchColumnByID(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPatch {
-		http.Error(w, "Method Not Allowed: ", http.StatusMethodNotAllowed)
+		slog.Warn("Method not allowed",
+			"method", r.Method,
+			"path", r.URL.Path)
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -214,7 +246,10 @@ func PatchColumnByID(w http.ResponseWriter, r *http.Request) {
 // @Router /DeleteColumnByID [delete]
 func DeleteColumnByID(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
-		http.Error(w, "Method Not Allowed: ", http.StatusMethodNotAllowed)
+		slog.Warn("Method not allowed",
+			"method", r.Method,
+			"path", r.URL.Path)
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -269,7 +304,10 @@ func DeleteColumnByID(w http.ResponseWriter, r *http.Request) {
 // @Router /TotalPriceByPeriod [get]
 func TotalPriceByPeriod(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		slog.Warn("Method not allowed",
+			"method", r.Method,
+			"path", r.URL.Path)
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -316,7 +354,10 @@ func TotalPriceByPeriod(w http.ResponseWriter, r *http.Request) {
 
 func ListSubscriptions(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		slog.Warn("Method not allowed",
+			"method", r.Method,
+			"path", r.URL.Path)
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
