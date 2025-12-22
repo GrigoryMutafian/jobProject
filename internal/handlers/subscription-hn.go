@@ -62,7 +62,7 @@ func CreateColumn(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&newSub)
 	if err != nil {
-		slog.Warn("Some data is missing",
+		slog.Warn("invalid json",
 			"body", newSub,
 			"need", "service, price, user_id, start_date, end_date",
 			"error", err)
@@ -129,13 +129,18 @@ func ReadSubByID(w http.ResponseWriter, r *http.Request) {
 
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
+		slog.Warn("id input is clear",
+			"need", ".../DeleteColumnByID?id=1")
 		http.Error(w, "id input is clear", http.StatusBadRequest)
 		return
 	}
 
 	idInt, err := strconv.Atoi(idStr)
 	if err != nil {
-		http.Error(w, "pars error", http.StatusBadRequest)
+		slog.Error("convertation error",
+			"body", idStr,
+			"error", err)
+		http.Error(w, "convertation error", http.StatusBadRequest)
 		return
 	}
 
@@ -143,14 +148,27 @@ func ReadSubByID(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch {
 		case usecase.IsValidationErr(err):
+			slog.Warn("Validation error while reading subscription",
+				"error", err,
+				"id", idInt)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		case usecase.IsConflictErr(err):
+			slog.Warn("Conflict error while reading subscription",
+				"error", err,
+				"id", idInt)
 			http.Error(w, err.Error(), http.StatusConflict)
 		default:
-			http.Error(w, "internal error: "+err.Error(), http.StatusInternalServerError)
+			slog.Error("Internal error while reading subscription",
+				"error", err,
+				"id", idInt)
+			http.Error(w, "internal error", http.StatusInternalServerError)
 		}
 		return
 	}
+
+	slog.Info("you had read subscription",
+		"id", idInt)
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	text := fmt.Sprintf("column id: %d", idInt)
@@ -193,33 +211,53 @@ func PatchColumnByID(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&patchBody)
 	if err != nil {
-		http.Error(w, "Invalid JSON: "+err.Error(), http.StatusBadRequest)
+		slog.Warn("invalid json",
+			"body", patchBody,
+			"need any of these", "service, price, user_id, start_date, end_date",
+			"error", err)
 		return
 	}
 
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
+		slog.Warn("id input is clear",
+			"need", ".../DeleteColumnByID?id=1")
 		http.Error(w, "id input is clear", http.StatusBadRequest)
 		return
 	}
 
 	idInt, err := strconv.Atoi(idStr)
 	if err != nil {
-		http.Error(w, "pars error", http.StatusBadRequest)
+		slog.Error("convertation error",
+			"body", idStr,
+			"error", err)
+		http.Error(w, "convertation error", http.StatusBadRequest)
 		return
 	}
 	err = subUC.PatchColumnByID(r.Context(), idInt, patchBody)
 	if err != nil {
 		switch {
 		case usecase.IsValidationErr(err):
+			slog.Warn("Validation error while patching subscription",
+				"error", err,
+				"patch body", patchBody)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		case usecase.IsConflictErr(err):
+			slog.Warn("Conflict error while patching subscription",
+				"error", err,
+				"patch body", patchBody)
 			http.Error(w, err.Error(), http.StatusConflict)
 		default:
-			http.Error(w, "internal error: "+err.Error(), http.StatusInternalServerError)
+			slog.Error("Internal error while patching subscription",
+				"error", err,
+				"patch body", patchBody)
+			http.Error(w, "internal error", http.StatusInternalServerError)
 		}
 		return
 	}
+
+	slog.Info("subscription patched",
+		"id", idInt)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -255,13 +293,18 @@ func DeleteColumnByID(w http.ResponseWriter, r *http.Request) {
 
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
+		slog.Warn("id input is clear",
+			"need", ".../DeleteColumnByID?id=1")
 		http.Error(w, "id input is clear", http.StatusBadRequest)
 		return
 	}
 
 	idInt, err := strconv.Atoi(idStr)
 	if err != nil {
-		http.Error(w, "pars error", http.StatusBadRequest)
+		slog.Error("convertation error",
+			"body", idStr,
+			"error", err)
+		http.Error(w, "convertation error", http.StatusBadRequest)
 		return
 	}
 
@@ -269,14 +312,28 @@ func DeleteColumnByID(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch {
 		case usecase.IsValidationErr(err):
+			slog.Warn("Validation error while subscription delete",
+				"error", err,
+				"id", idInt)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		case usecase.IsConflictErr(err):
+			slog.Warn("Conflict error while subscription delete",
+				"error", err,
+				"id", idInt)
 			http.Error(w, err.Error(), http.StatusConflict)
 		default:
-			http.Error(w, "internal error: "+err.Error(), http.StatusInternalServerError)
+			slog.Error("Internal error while subscription delete",
+				"error", err,
+				"id", idInt)
+			http.Error(w, "internal error", http.StatusInternalServerError)
+
 		}
 		return
 	}
+
+	slog.Info("subscription deleted",
+		"id", idInt)
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	text := fmt.Sprintf("deleted column id: %d", idInt)
