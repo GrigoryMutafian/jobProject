@@ -7,7 +7,6 @@ import (
 	"jobProject/internal/conv"
 	"jobProject/internal/model"
 	"jobProject/internal/usecase"
-	"log"
 	"log/slog"
 	"net/http"
 	"regexp"
@@ -57,7 +56,7 @@ func CreateColumn(w http.ResponseWriter, r *http.Request) {
 
 	var newSub model.Subscription
 
-	slog.Debug("Getting JSON with new column parametrs",
+	slog.Debug("Getting JSON with new column parameters",
 		"table", "subs_table")
 
 	err := json.NewDecoder(r.Body).Decode(&newSub)
@@ -137,10 +136,10 @@ func ReadSubByID(w http.ResponseWriter, r *http.Request) {
 
 	idInt, err := strconv.Atoi(idStr)
 	if err != nil {
-		slog.Error("convertation error",
+		slog.Error("conversation error",
 			"body", idStr,
 			"error", err)
-		http.Error(w, "convertation error", http.StatusBadRequest)
+		http.Error(w, "conversation error", http.StatusBadRequest)
 		return
 	}
 
@@ -228,10 +227,10 @@ func PatchColumnByID(w http.ResponseWriter, r *http.Request) {
 
 	idInt, err := strconv.Atoi(idStr)
 	if err != nil {
-		slog.Error("convertation error",
+		slog.Error("conversation error",
 			"body", idStr,
 			"error", err)
-		http.Error(w, "convertation error", http.StatusBadRequest)
+		http.Error(w, "conversation error", http.StatusBadRequest)
 		return
 	}
 	err = subUC.PatchColumnByID(r.Context(), idInt, patchBody)
@@ -301,10 +300,10 @@ func DeleteColumnByID(w http.ResponseWriter, r *http.Request) {
 
 	idInt, err := strconv.Atoi(idStr)
 	if err != nil {
-		slog.Error("convertation error",
+		slog.Error("conversation error",
 			"body", idStr,
 			"error", err)
-		http.Error(w, "convertation error", http.StatusBadRequest)
+		http.Error(w, "conversation error", http.StatusBadRequest)
 		return
 	}
 
@@ -374,22 +373,33 @@ func TotalPriceByPeriod(w http.ResponseWriter, r *http.Request) {
 	dateTo := r.URL.Query().Get("date_to")
 
 	if userID == "" || service == "" || dateFrom == "" || dateTo == "" {
+		slog.Warn("user_id, service, date_from, date_to required",
+			"body", fmt.Sprintf("required %v,%v, %v, %v", userID, service, dateFrom, dateTo))
 		http.Error(w, "user_id, service, date_from, date_to required", http.StatusBadRequest)
 		return
 	}
 
 	if !validateUUID(userID) {
+		slog.Warn("invalid user_id format",
+			"user_id", userID,
+			"need", "must be a valid UUID (e.g., 70601fee-2bf1-4721-ae6f-7636e79a0cbb)")
 		http.Error(w, "invalid user_id format: must be a valid UUID (e.g., 70601fee-2bf1-4721-ae6f-7636e79a0cbb)", http.StatusBadRequest)
 		return
 	}
 
 	fromTime, err := conv.ParseMMYYYY(dateFrom)
 	if err != nil {
+		slog.Warn("wrong date_from format",
+			"fromTime", fromTime,
+			"need", "01-2006")
 		http.Error(w, "wrong date_from format", http.StatusBadRequest)
 		return
 	}
 	toTime, err := conv.ParseMMYYYY(dateTo)
 	if err != nil {
+		slog.Warn("wrong date_from format",
+			"toTime", toTime,
+			"need", "01-2006")
 		http.Error(w, "wrong date_to format", http.StatusBadRequest)
 		return
 	}
@@ -397,12 +407,19 @@ func TotalPriceByPeriod(w http.ResponseWriter, r *http.Request) {
 	total, err := subUC.TotalPriceByPeriod(r.Context(), userID, service, fromTime, toTime)
 	if err != nil {
 		if usecase.IsValidationErr(err) {
+			slog.Warn("Validation error",
+				"error", err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		} else {
+			slog.Warn("Internal error",
+				"error", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 		return
 	}
+
+	slog.Info("Subscriptions had reveal",
+		"request body", fmt.Sprintf("required %v,%v, %v, %v", userID, service, dateFrom, dateTo))
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -413,18 +430,27 @@ func ListSubscriptions(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		slog.Warn("Method not allowed",
 			"method", r.Method,
-			"path", r.URL.Path)
+			"path", r.URL.Path,
+		)
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	userID := r.URL.Query().Get("user_id")
 	if userID == "" {
+		slog.Warn("user_id is empty",
+			"path", r.URL.Path,
+			"need", ".../ListSubscriptions?user_id=70601fee-2bf1-4721-ae6f-7636e79a0cbb",
+		)
 		http.Error(w, "user_id parameter is required", http.StatusBadRequest)
 		return
 	}
 
 	if !validateUUID(userID) {
+		slog.Warn("invalid user_id format",
+			"user_id", userID,
+			"need", "must be a valid UUID (e.g., 70601fee-2bf1-4721-ae6f-7636e79a0cbb)",
+		)
 		http.Error(w, "invalid user_id format: must be a valid UUID (70601fee-2bf1-4721-ae6f-7636e79a0cbb)", http.StatusBadRequest)
 		return
 	}
@@ -440,6 +466,11 @@ func ListSubscriptions(w http.ResponseWriter, r *http.Request) {
 	if pageStr != "" {
 		page, err := strconv.Atoi(pageStr)
 		if err != nil || page < 1 {
+			slog.Warn("invalid page parameter",
+				"page_raw", pageStr,
+				"error", err,
+				"user_id", userID,
+			)
 			http.Error(w, "invalid page parameter: must be a positive integer", http.StatusBadRequest)
 			return
 		}
@@ -449,10 +480,20 @@ func ListSubscriptions(w http.ResponseWriter, r *http.Request) {
 	if limitStr != "" {
 		limit, err := strconv.Atoi(limitStr)
 		if err != nil || limit < 1 {
+			slog.Warn("invalid limit parameter",
+				"limit_raw", limitStr,
+				"error", err,
+				"user_id", userID,
+			)
 			http.Error(w, "invalid limit parameter: must be a positive integer", http.StatusBadRequest)
 			return
 		}
 		if limit > 100 {
+			slog.Warn("limit parameter too large",
+				"limit", limit,
+				"max_limit", 100,
+				"user_id", userID,
+			)
 			http.Error(w, "invalid limit parameter: maximum value is 100", http.StatusBadRequest)
 			return
 		}
@@ -461,18 +502,43 @@ func ListSubscriptions(w http.ResponseWriter, r *http.Request) {
 
 	params.Validate()
 
+	slog.Debug("Listing subscriptions",
+		"user_id", userID,
+		"page", params.Page,
+		"limit", params.Limit,
+		"offset", params.GetOffset(),
+	)
+
 	response, err := subUC.ListSubscriptions(r.Context(), userID, params)
 	if err != nil {
-		log.Printf("error listing subscriptions: %v", err)
-		http.Error(w, fmt.Sprintf("internal error: %v", err), http.StatusInternalServerError)
+		slog.Error("error listing subscriptions",
+			"error", err,
+			"user_id", userID,
+			"page", params.Page,
+			"limit", params.Limit,
+		)
+		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		log.Printf("error encoding response: %v", err)
+		slog.Error("error encoding response",
+			"error", err,
+			"user_id", userID,
+			"page", params.Page,
+			"limit", params.Limit,
+		)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
+
+	slog.Info("Subscriptions listed successfully",
+		"user_id", userID,
+		"page", params.Page,
+		"limit", params.Limit,
+		"returned_count", len(response.Data),
+		"total", response.Pagination.Total,
+	)
 }
